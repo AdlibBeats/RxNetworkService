@@ -50,6 +50,10 @@ open class RxNetworkService {
     public enum Charset: String {
         case utf8 = "utf-8"
     }
+    
+    public init() {
+        
+    }
 }
 
 extension RxNetworkService: RxNetworkServiceProtocol {
