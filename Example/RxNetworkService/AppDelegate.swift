@@ -2,8 +2,8 @@
 //  AppDelegate.swift
 //  RxNetworkService
 //
-//  Created by adlibbeats@icloud.com on 03/13/2021.
-//  Copyright (c) 2021 adlibbeats@icloud.com. All rights reserved.
+//  Created by AdlibBeats on 03/13/2021.
+//  Copyright © 2021 AdlibBeats. All rights reserved.
 //
 
 import UIKit

@@ -1,10 +1,14 @@
-use_frameworks!
-
 platform :ios, '9.0'
+use_modular_headers!
+use_frameworks!
 
 target 'RxNetworkService_Example' do
   pod 'RxNetworkService', :path => '../'
-
+  
+  pod 'RxSwift'
+  pod 'RxCocoa'
+  pod 'SWXMLHash'
+  
   target 'RxNetworkService_Tests' do
     inherit! :search_paths
 
