@@ -12,6 +12,8 @@ import SWXMLHash
 
 // MARK: XMLMapper
 
+public typealias XMLOutput = XMLIndexerDeserializable
+
 infix operator <- : DefaultPrecedence
 
 extension String {
@@ -63,7 +65,7 @@ public protocol RxNetworkServiceProtocol: class {
     func fetchResponse(from urlRequest: URLRequest) -> Observable<(response: HTTPURLResponse, data: Data)>
     func fetchDecodableOutput<Element: Decodable>(from data: Data) -> Observable<Element>
     func fetchStringResponse(from data: Data) -> Observable<String>
-    func fetchXMLOutput<Output: XMLIndexerDeserializable>(from stringResponse: String) -> Observable<Output>
+    func fetchXMLOutput<Output: XMLOutput>(from stringResponse: String) -> Observable<Output>
 }
 
 open class RxNetworkService {
@@ -91,7 +93,7 @@ open class RxNetworkService {
                 case unknown
             }
             
-            public static func parse<Output: XMLIndexerDeserializable>(_ type: Output.Type, from stringResponse: String) throws -> XMLIndexer {
+            public static func parse<Output: XMLOutput>(_ type: Output.Type, from stringResponse: String) throws -> XMLIndexer {
                 try SWXMLHash.parse(stringResponse)
                     .byKey("SOAP-ENV:\(String(describing: Envelope.self))")
                     .byKey("SOAP-ENV:\(String(describing: Body.self))")
@@ -256,7 +258,7 @@ extension RxNetworkService: RxNetworkServiceProtocol {
         }
     }
     
-    public func fetchXMLOutput<Output: XMLIndexerDeserializable>(from stringResponse: String) -> Observable<Output> {
+    public func fetchXMLOutput<Output: XMLOutput>(from stringResponse: String) -> Observable<Output> {
         Observable.create {
             do { $0.onNext( try XML.Mapper.parse(Output.self, from: stringResponse).value()) }
             catch { $0.onError(error) }
