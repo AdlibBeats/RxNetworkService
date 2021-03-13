@@ -10,40 +10,6 @@ import RxCocoa
 import RxSwift
 import SWXMLHash
 
-// MARK: XMLMapper
-
-public typealias XMLOutput = XMLIndexerDeserializable
-
-infix operator <- : DefaultPrecedence
-
-extension String {
-    public static func <- (name: Self, value: String) -> RxNetworkService.XML.Mapper.Property {
-        .init(name: name, value: value)
-    }
-}
-
-public protocol XMLProtocol {
-    var xml: String { get }
-}
-
-public protocol XMLInput: XMLProtocol {
-    func mapping() -> RxNetworkService.XML.Mapper.Property
-}
-
-extension XMLInput {
-    public var xml: String {
-        RxNetworkService.XML.Mapper(value: mapping().xml(mode: .parent)).xml
-    }
-}
-
-public protocol XMLMapperProtocol: XMLProtocol {
-    func xml(mode: RxNetworkService.XML.Mapper.KindMode) -> String
-}
-
-public protocol XMLValueMapperProtocol: XMLMapperProtocol {
-    var value: String { get }
-}
-
 // MARK: RxNetworkService
 
 public protocol RxNetworkServiceProtocol: class {
@@ -84,7 +50,127 @@ open class RxNetworkService {
     public enum Charset: String {
         case utf8 = "utf-8"
     }
+}
+
+extension RxNetworkService: RxNetworkServiceProtocol {
+    public func fetchUrl(from string: String) -> Observable<URL> {
+        Observable.create {
+            if let url = URL(string: string) { $0.onNext(url) }
+            else { $0.onError(RxError.noElements) }
+            return Disposables.create()
+        }
+    }
     
+    public func fetchURLRequest(
+        from url: String,
+        contentType: RxNetworkService.ContentType,
+        charset: RxNetworkService.Charset,
+        httpMethod: RxNetworkService.HTTPMethod,
+        body: Data?
+    ) -> Observable<URLRequest> {
+        fetchUrl(from: url).map {
+            var urlRequest = URLRequest(url: $0)
+            urlRequest.httpMethod = httpMethod.rawValue
+            urlRequest.addValue(
+                "text/\(contentType.rawValue); charset=\(charset.rawValue)",
+                forHTTPHeaderField: "Content-Type"
+            )
+            urlRequest.httpBody = body
+            return urlRequest
+        }
+    }
+    
+    public func fetchURLRequest(
+        from url: String,
+        contentType: RxNetworkService.ContentType,
+        charset: RxNetworkService.Charset,
+        httpMethod: RxNetworkService.HTTPMethod,
+        body: String
+    ) -> Observable<URLRequest> {
+        fetchUrl(from: url).map {
+            var urlRequest = URLRequest(url: $0)
+            urlRequest.httpMethod = httpMethod.rawValue
+            urlRequest.addValue(
+                "text/\(contentType.rawValue); charset=\(charset.rawValue)",
+                forHTTPHeaderField: "Content-Type"
+            )
+            if !body.isEmpty {
+                urlRequest.httpBody = body.data(
+                    using: String.Encoding.utf8,
+                    allowLossyConversion: false
+                )
+            }
+            return urlRequest
+        }
+    }
+    
+    public func fetchResponse(from urlRequest: URLRequest) -> Observable<(response: HTTPURLResponse, data: Data)> {
+        URLSession.shared.rx.response(request: urlRequest)
+    }
+    
+    public func fetchDecodableOutput<Element: Decodable>(from data: Data) -> Observable<Element> {
+        Observable.create {
+            do { $0.onNext(try JSONDecoder().decode(Element.self, from: data)) }
+            catch { $0.onError(error) }
+            return Disposables.create()
+        }
+    }
+    
+    public func fetchStringResponse(from data: Data) -> Observable<String> {
+        Observable.create {
+            if let result = String(
+                data: data,
+                encoding: String.Encoding(rawValue: String.Encoding.utf8.rawValue)
+            ) { $0.onNext(result) }
+            else { $0.onError(RxError.noElements) }
+            return Disposables.create()
+        }
+    }
+    
+    public func fetchXMLOutput<Output: XMLOutput>(from stringResponse: String) -> Observable<Output> {
+        Observable.create {
+            do { $0.onNext( try XML.Mapper.parse(Output.self, from: stringResponse).value()) }
+            catch { $0.onError(error) }
+            return Disposables.create()
+        }
+    }
+}
+
+// MARK: XMLMapper
+
+public typealias XMLOutput = XMLIndexerDeserializable
+
+infix operator <- : DefaultPrecedence
+
+extension String {
+    public static func <- (name: Self, value: String) -> RxNetworkService.XML.Mapper.Property {
+        .init(name: name, value: value)
+    }
+}
+
+public protocol XMLProtocol {
+    var xml: String { get }
+}
+
+public protocol XMLInput: XMLProtocol {
+    func mapping() -> RxNetworkService.XML.Mapper.Property
+}
+
+extension XMLInput {
+    public var xml: String {
+        RxNetworkService.XML.Mapper(value: mapping().xml(mode: .parent)).xml
+    }
+}
+
+public protocol XMLMapperProtocol: XMLProtocol {
+    func xml(mode: RxNetworkService.XML.Mapper.KindMode) -> String
+}
+
+public protocol XMLValueMapperProtocol: XMLMapperProtocol {
+    var value: String { get }
+}
+
+extension RxNetworkService {
     public enum XML {
         public struct Mapper: XMLValueMapperProtocol {
             public enum KindMode {
@@ -179,90 +265,6 @@ open class RxNetworkService {
             public func xml(mode: KindMode) -> String {
                 [Header().xml, Envelope(value: Body(value: value).xml).xml].joined()
             }
-        }
-    }
-}
-
-extension RxNetworkService: RxNetworkServiceProtocol {
-    public func fetchUrl(from string: String) -> Observable<URL> {
-        Observable.create {
-            if let url = URL(string: string) { $0.onNext(url) }
-            else { $0.onError(RxError.noElements) }
-            return Disposables.create()
-        }
-    }
-    
-    public func fetchURLRequest(
-        from url: String,
-        contentType: RxNetworkService.ContentType,
-        charset: RxNetworkService.Charset,
-        httpMethod: RxNetworkService.HTTPMethod,
-        body: Data?
-    ) -> Observable<URLRequest> {
-        fetchUrl(from: url).map {
-            var urlRequest = URLRequest(url: $0)
-            urlRequest.httpMethod = httpMethod.rawValue
-            urlRequest.addValue(
-                "text/\(contentType.rawValue); charset=\(charset.rawValue)",
-                forHTTPHeaderField: "Content-Type"
-            )
-            urlRequest.httpBody = body
-            return urlRequest
-        }
-    }
-    
-    public func fetchURLRequest(
-        from url: String,
-        contentType: RxNetworkService.ContentType,
-        charset: RxNetworkService.Charset,
-        httpMethod: RxNetworkService.HTTPMethod,
-        body: String
-    ) -> Observable<URLRequest> {
-        fetchUrl(from: url).map {
-            var urlRequest = URLRequest(url: $0)
-            urlRequest.httpMethod = httpMethod.rawValue
-            urlRequest.addValue(
-                "text/\(contentType.rawValue); charset=\(charset.rawValue)",
-                forHTTPHeaderField: "Content-Type"
-            )
-            if !body.isEmpty {
-                urlRequest.httpBody = body.data(
-                    using: String.Encoding.utf8,
-                    allowLossyConversion: false
-                )
-            }
-            return urlRequest
-        }
-    }
-    
-    public func fetchResponse(from urlRequest: URLRequest) -> Observable<(response: HTTPURLResponse, data: Data)> {
-        URLSession.shared.rx.response(request: urlRequest)
-    }
-    
-    public func fetchDecodableOutput<Element: Decodable>(from data: Data) -> Observable<Element> {
-        Observable.create {
-            do { $0.onNext(try JSONDecoder().decode(Element.self, from: data)) }
-            catch { $0.onError(error) }
-            return Disposables.create()
-        }
-    }
-    
-    public func fetchStringResponse(from data: Data) -> Observable<String> {
-        Observable.create {
-            if let result = String(
-                data: data,
-                encoding: String.Encoding(rawValue: String.Encoding.utf8.rawValue)
-            ) { $0.onNext(result) }
-            else { $0.onError(RxError.noElements) }
-            return Disposables.create()
-        }
-    }
-    
-    public func fetchXMLOutput<Output: XMLOutput>(from stringResponse: String) -> Observable<Output> {
-        Observable.create {
-            do { $0.onNext( try XML.Mapper.parse(Output.self, from: stringResponse).value()) }
-            catch { $0.onError(error) }
-            return Disposables.create()
         }
     }
 }

@@ -22,7 +22,7 @@ pod 'RxNetworkService'
 
 ## Author
 
-adlibbeats@icloud.com, adlibbeats@icloud.com
+AdlibBeats, adlibbeats@icloud.com
 
 ## License
 
