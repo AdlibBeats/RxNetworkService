@@ -16,7 +16,7 @@ Pod::Spec.new do |s|
   s.author           = { 'AdlibBeats' => 'adlibbeats@icloud.com' }
   s.source           = { :git => 'https://github.com/AdlibBeats/RxNetworkService.git' }
   s.ios.deployment_target = '9.0'
-  s.source_files = 'Classes/**/*'
+  s.source_files = 'RxNetworkService/Classes/**/*.{swift}'
   s.dependency 'RxSwift'
   s.dependency 'RxCocoa'
   s.dependency 'SWXMLHash'
