@@ -10,7 +10,7 @@ import UIKit
 import RxSwift
 import RxCocoa
 import RxNetworkService
-import SWXMLHash
+import enum SWXMLHash.XMLIndexer
 
 class ViewController: UIViewController { }
 
@@ -31,6 +31,8 @@ final class RxMyNetworkService: RxNetworkService {
 }
 
 extension RxMyNetworkService: RxMyNetworkServiceProtocol {
+    
+    // MARK: fetch JSONOutput
     func fetchMyJSONOutput() -> Observable<RxMyNetworkService.MyJSONOutput> {
         fetchURLRequest(
             from: [Config.baseUrl.rawValue, Config.jsonUrl.rawValue].joined(),
@@ -44,6 +46,7 @@ extension RxMyNetworkService: RxMyNetworkServiceProtocol {
         .flatMapLatest(fetchDecodableOutput)
     }
     
+    // MARK: fetch XMLOutput
     func fetchMyXMLOutput() -> Observable<MyXMLOutput> {
         fetchURLRequest(
             from: [Config.baseUrl.rawValue, Config.xmlUrl.rawValue].joined(),
@@ -123,7 +126,7 @@ extension RxMyNetworkService {
     }
     
     // MARK: XML Output struct
-    struct MyXMLOutput: XMLIndexerDeserializable {
+    struct MyXMLOutput: XMLOutput {
         let value: String
         
         static func deserialize(_ node: XMLIndexer) throws -> MyXMLOutput {
