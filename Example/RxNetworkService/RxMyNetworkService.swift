@@ -9,7 +9,6 @@
 import RxSwift
 import RxCocoa
 import RxNetworkService
-import enum SWXMLHash.XMLIndexer
 
 protocol RxMyNetworkServiceProtocol: RxNetworkServiceProtocol {
     func fetchMyJSONOutput() -> Observable<RxMyNetworkService.MyJSONOutput>
@@ -127,9 +126,9 @@ extension RxMyNetworkService {
     struct MyXMLOutput: XMLOutput {
         let value: String
         
-        static func deserialize(_ node: XMLIndexer) throws -> MyXMLOutput {
+        static func deserialize(_ model: XMLModel) throws -> MyXMLOutput {
             try MyXMLOutput(
-                value: node["ns1:value"].value()
+                value: model["ns1:value"].value()
             )
         }
     }

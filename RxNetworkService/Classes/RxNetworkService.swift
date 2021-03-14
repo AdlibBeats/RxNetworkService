@@ -142,6 +142,7 @@ extension RxNetworkService: RxNetworkServiceProtocol {
 
 // MARK: XMLMapper
 
+public typealias XMLModel = XMLIndexer
 public typealias XMLOutput = XMLIndexerDeserializable
 
 infix operator <- : DefaultPrecedence
@@ -183,7 +184,7 @@ extension RxNetworkService {
                 case unknown
             }
             
-            public static func parse<Output: XMLOutput>(_ type: Output.Type, from stringResponse: String) throws -> XMLIndexer {
+            public static func parse<Output: XMLOutput>(_ type: Output.Type, from stringResponse: String) throws -> XMLModel {
                 try SWXMLHash.parse(stringResponse)
                     .byKey("SOAP-ENV:\(String(describing: Envelope.self))")
                     .byKey("SOAP-ENV:\(String(describing: Body.self))")
