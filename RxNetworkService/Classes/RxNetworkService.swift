@@ -148,8 +148,12 @@ public typealias XMLOutput = XMLIndexerDeserializable
 infix operator <- : DefaultPrecedence
 
 extension String {
-    public static func <- (name: Self, value: String) -> RxNetworkService.XML.Mapper.Property {
+    public static func <- (name: Self, value: RxNetworkService.XML.Mapper.Property.Value) -> RxNetworkService.XML.Mapper.Property {
         .init(name: name, value: value)
+    }
+    
+    public static func <- (name: Self, value: String) -> RxNetworkService.XML.Mapper.Property {
+        .init(name: name, value: .init(value: value))
     }
 }
 
@@ -245,13 +249,27 @@ extension RxNetworkService {
             }
             
             public struct Property: XMLValueMapperProtocol {
+                public struct Value {
+                    let value: String
+                    let parentUrl: String
+                    
+                    public init(value: String, parentUrl: String) {
+                        self.value = value
+                        self.parentUrl = parentUrl
+                    }
+                    
+                    public init(value: String) {
+                        self.init(value: value, parentUrl: "")
+                    }
+                }
+                
                 private let name: String
                 private let parentUrl: String
                 
-                public init(name: String, value: String, parentUrl: String = "http://www.tais.ru/") {
+                public init(name: String, value: Value) {
                     self.name = name
-                    self.value = value
-                    self.parentUrl = parentUrl
+                    self.value = value.value
+                    self.parentUrl = value.parentUrl
                 }
                 
                 public var xml: String { xml(mode: .child) }
