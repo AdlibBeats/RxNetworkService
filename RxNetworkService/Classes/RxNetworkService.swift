@@ -32,31 +32,10 @@ public protocol RxNetworkServiceProtocol: class {
     func fetchDecodableOutput<Element: Decodable>(from data: Data) -> Observable<Element>
     func fetchStringResponse(from data: Data) -> Observable<String>
     func fetchXMLOutput<Output: XMLOutput>(from stringResponse: String) -> Observable<Output>
+    func fetchStatus(from response: (HTTPURLResponse, Data)) -> Observable<RxNetworkService.Status>
 }
 
-open class RxNetworkService {
-    public enum HTTPMethod: String {
-        case get = "GET"
-        case post = "POST"
-        case put = "PUT"
-        case delete = "DELETE"
-    }
-    
-    public enum ContentType: String {
-        case json
-        case xml
-    }
-    
-    public enum Charset: String {
-        case utf8 = "utf-8"
-    }
-    
-    public init() {
-        
-    }
-}
-
-extension RxNetworkService: RxNetworkServiceProtocol {
+extension RxNetworkServiceProtocol {
     public func fetchUrl(from string: String) -> Observable<URL> {
         Observable.create {
             if let url = URL(string: string) { $0.onNext(url) }
@@ -133,10 +112,45 @@ extension RxNetworkService: RxNetworkServiceProtocol {
     
     public func fetchXMLOutput<Output: XMLOutput>(from stringResponse: String) -> Observable<Output> {
         Observable.create {
-            do { $0.onNext( try XML.Mapper.parse(Output.self, from: stringResponse).value()) }
+            do { $0.onNext( try RxNetworkService.XML.Mapper.parse(Output.self, from: stringResponse).value()) }
             catch { $0.onError(error) }
             return Disposables.create()
         }
+    }
+    
+    public func fetchStatus(from response: (HTTPURLResponse, Data)) -> Observable<RxNetworkService.Status> {
+        Observable.create {
+            if 200...299 ~= response.0.statusCode { $0.onNext(.success(response.0.statusCode, String(data: response.1, encoding: .utf8) ?? "")) }
+            else { $0.onNext(.failure(response.0.statusCode)) }
+            return Disposables.create()
+        }
+    }
+}
+
+open class RxNetworkService: RxNetworkServiceProtocol {
+    public enum Status {
+        case success(Int, String)
+        case failure(Int)
+    }
+    
+    public enum HTTPMethod: String {
+        case get = "GET"
+        case post = "POST"
+        case put = "PUT"
+        case delete = "DELETE"
+    }
+    
+    public enum ContentType: String {
+        case json
+        case xml
+    }
+    
+    public enum Charset: String {
+        case utf8 = "utf-8"
+    }
+    
+    public init() {
+        
     }
 }
 
@@ -150,10 +164,6 @@ infix operator <- : DefaultPrecedence
 extension String {
     public static func <- (name: Self, value: RxNetworkService.XML.Mapper.Property.Value) -> RxNetworkService.XML.Mapper.Property {
         .init(name: name, value: value)
-    }
-    
-    public static func <- (name: Self, value: String) -> RxNetworkService.XML.Mapper.Property {
-        .init(name: name, value: .init(value: value))
     }
 }
 

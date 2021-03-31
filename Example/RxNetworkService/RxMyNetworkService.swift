@@ -10,6 +10,12 @@ import RxSwift
 import RxCocoa
 import RxNetworkService
 
+extension String {
+    static func <- (name: Self, value: String) -> RxNetworkService.XML.Mapper.Property {
+        .init(name: name, value: .init(value: value, parentUrl: "http://www.soap-url..."))
+    }
+}
+
 protocol RxMyNetworkServiceProtocol: RxNetworkServiceProtocol {
     func fetchMyJSONOutput() -> Observable<RxMyNetworkService.MyJSONOutput>
     func fetchMyXMLOutput() -> Observable<RxMyNetworkService.MyXMLOutput>
