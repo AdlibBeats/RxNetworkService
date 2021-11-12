@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'RxNetworkService'
-  s.version          = '1.0.5'
+  s.version          = '1.1.0'
   s.summary          = 'A short description of RxNetworkService.'
   s.requires_arc = true
   s.homepage         = 'https://github.com/AdlibBeats/RxNetworkService'
