@@ -12,6 +12,23 @@ import SWXMLHash
 
 // MARK: RxNetworkService
 
+public enum RxNetworkServiceError: Error {
+    public enum Status: Int {
+        case badRequest = 400
+        case unauthorized = 401
+        case notFound = 404
+        case requestTimeout = 408
+        case internalServerError = 500
+        case notImplemented = 501
+        case badGateway = 502
+        case serviceUnavailable = 503
+        case unknown
+    }
+    case invalidUrl(String)
+    case invalidData(Data)
+    case requestError(Status)
+}
+
 public protocol RxNetworkServiceProtocol: class {
     func fetchUrl(from string: String) -> Observable<URL>
     func fetchURLRequest(
@@ -32,7 +49,7 @@ public protocol RxNetworkServiceProtocol: class {
     func fetchDecodableOutput<Element: Decodable>(from data: Data) -> Observable<Element>
     func fetchStringResponse(from data: Data) -> Observable<String>
     func fetchXMLOutput<Output: XMLOutput>(from stringResponse: String) -> Observable<Output>
-    func fetchStatus(from response: (HTTPURLResponse, Data)) -> Observable<RxNetworkService.Status>
+    func fetchStatus(from response: (HTTPURLResponse, Data)) -> Observable<RxNetworkService.Response>
 }
 
 extension RxNetworkServiceProtocol {
@@ -79,7 +96,7 @@ extension RxNetworkServiceProtocol {
             )
             if !body.isEmpty {
                 urlRequest.httpBody = body.data(
-                    using: String.Encoding.utf8,
+                    using: .utf8,
                     allowLossyConversion: false
                 )
             }
@@ -103,7 +120,7 @@ extension RxNetworkServiceProtocol {
         Observable.create {
             if let result = String(
                 data: data,
-                encoding: String.Encoding(rawValue: String.Encoding.utf8.rawValue)
+                encoding: .utf8
             ) { $0.onNext(result) }
             else { $0.onError(RxError.noElements) }
             return Disposables.create()
@@ -118,19 +135,26 @@ extension RxNetworkServiceProtocol {
         }
     }
     
-    public func fetchStatus(from response: (HTTPURLResponse, Data)) -> Observable<RxNetworkService.Status> {
+    public func fetchStatus(from response: (HTTPURLResponse, Data)) -> Observable<RxNetworkService.Response> {
         Observable.create {
-            if 200...299 ~= response.0.statusCode { $0.onNext(.success(response.0.statusCode, String(data: response.1, encoding: .utf8) ?? "")) }
-            else { $0.onNext(.failure(response.0.statusCode)) }
+            switch response.0.statusCode {
+            case 200...299: $0.onNext(.init(statusCode: response.0.statusCode, allHeaderFields: response.0.allHeaderFields, data: response.1))
+            case let value: $0.onError(RxNetworkServiceError.requestError(.init(rawValue: value) ?? .unknown))
+            }
             return Disposables.create()
         }
     }
 }
 
 open class RxNetworkService: RxNetworkServiceProtocol {
-    public enum Status {
-        case success(Int, String)
-        case failure(Int)
+    public struct Response {
+        let statusCode: Int
+        let allHeaderFields: [AnyHashable: Any]
+        let data: Data
+
+        var dataString: String {
+            String(data: data, encoding: .utf8) ?? ""
+        }
     }
     
     public enum HTTPMethod: String {
@@ -157,7 +181,13 @@ open class RxNetworkService: RxNetworkServiceProtocol {
 // MARK: XMLMapper
 
 public typealias XMLModel = XMLIndexer
-public typealias XMLOutput = XMLIndexerDeserializable
+public protocol XMLOutput: XMLIndexerDeserializable {
+    static func deserialize(_ model: XMLModel) throws -> Self
+}
+
+public extension XMLOutput {
+    static func deserialize(_ model: XMLModel) throws -> Self { try deserialize(model) }
+}
 
 infix operator <- : DefaultPrecedence
 
