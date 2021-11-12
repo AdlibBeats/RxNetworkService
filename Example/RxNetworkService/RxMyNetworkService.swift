@@ -44,7 +44,6 @@ extension RxMyNetworkService: RxMyNetworkServiceProtocol {
             body: try? JSONEncoder().encode(MyJSONInput(test: "hello")) // nil // String or Data? (Codable)
         )
         .flatMapLatest(fetchResponse)
-        .map { $0.data }
         .flatMapLatest(fetchDecodableOutput)
     }
     
@@ -62,7 +61,6 @@ extension RxMyNetworkService: RxMyNetworkServiceProtocol {
             ).xml
         )
         .flatMapLatest(fetchResponse)
-        .map { $0.data }
         .flatMapLatest(fetchStringResponse)
         .flatMapLatest(fetchXMLOutput)
     }

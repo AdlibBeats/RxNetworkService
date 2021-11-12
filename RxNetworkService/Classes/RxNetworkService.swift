@@ -27,6 +27,20 @@ public enum RxNetworkServiceError: Error {
     case invalidUrl(String)
     case invalidData(Data)
     case requestError(Status)
+
+    var description: String {
+        switch self {
+        case .invalidUrl(let string): return "Invalid url string: \(string)"
+        case .invalidData(let data): return "Invalid data: \(data)"
+        case .requestError(let status): return "Error status code: \(status.rawValue > 0 ? "\(status.rawValue)" : "unknown")"
+        }
+    }
+}
+
+private extension ObserverType {
+    func onError(_ error: RxNetworkServiceError) {
+        self.on(.error(error))
+    }
 }
 
 public protocol RxNetworkServiceProtocol: class {
@@ -46,21 +60,89 @@ public protocol RxNetworkServiceProtocol: class {
         body: String
     ) -> Observable<URLRequest>
     func fetchResponse(from urlRequest: URLRequest) -> Observable<(response: HTTPURLResponse, data: Data)>
-    func fetchDecodableOutput<Element: Decodable>(from data: Data) -> Observable<Element>
-    func fetchStringResponse(from data: Data) -> Observable<String>
+    func fetchDecodableOutput<Output: Decodable>(response: HTTPURLResponse, data: Data) -> Observable<Output>
+    func fetchStringResponse(response: HTTPURLResponse, data: Data) -> Observable<String>
     func fetchXMLOutput<Output: XMLOutput>(from stringResponse: String) -> Observable<Output>
-    func fetchStatus(from response: (HTTPURLResponse, Data)) -> Observable<RxNetworkService.Response>
+    func fetchStatus(response: HTTPURLResponse, data: Data) -> Observable<RxNetworkService.Response>
 }
 
-extension RxNetworkServiceProtocol {
+open class RxNetworkService {
+    public struct Response {
+        let statusCode: Int
+        let allHeaderFields: [AnyHashable: Any]
+        let data: Data
+
+        var dataString: String {
+            String(data: data, encoding: .utf8) ?? ""
+        }
+    }
+
+    public enum HTTPMethod: String {
+        case get = "GET"
+        case post = "POST"
+        case put = "PUT"
+        case delete = "DELETE"
+    }
+
+    public enum ContentType: String {
+        case json
+        case xml
+    }
+
+    public enum Charset: String {
+        case utf8 = "utf-8"
+    }
+
+    public enum Logging {
+        case request
+        case response
+        case error
+    }
+
+    public var logging: [Logging] = [.request, .response, .error]
+
+    public init() {
+
+    }
+
+    private func logRequest(request: URLRequest) {
+        guard
+            logging.contains(.request),
+            let httpMethod = request.httpMethod,
+            let httpBody = request.httpBody
+        else { return }
+
+        #if DEBUG
+        print("*** 🟡 Request ***\nHTTPMethod: \(httpMethod)\nHTTPBody: \(String(data: httpBody, encoding: .utf8) ?? httpBody.description)")
+        #endif
+    }
+
+    private func logResponse(response: HTTPURLResponse, data: Data) {
+        guard logging.contains(.response) else { return }
+
+        #if DEBUG
+        print("*** 🟢 Response ***\nStatus code: \(response.statusCode)\nData: \(String(data: data, encoding: .utf8) ?? data.description)")
+        #endif
+    }
+
+    private func logError(error: Error) {
+        guard logging.contains(.error) else { return }
+
+        #if DEBUG
+        print("*** 🔴 Error ***\nValue: \({ ($0 as? RxNetworkServiceError) ?? $0 }(error))")
+        #endif
+    }
+}
+
+extension RxNetworkService: RxNetworkServiceProtocol {
     public func fetchUrl(from string: String) -> Observable<URL> {
         Observable.create {
             if let url = URL(string: string) { $0.onNext(url) }
-            else { $0.onError(RxError.noElements) }
+            else { $0.onError(.invalidUrl(string)) }
             return Disposables.create()
-        }
+        }.do(onError: logError)
     }
-    
+
     public func fetchURLRequest(
         from url: String,
         contentType: RxNetworkService.ContentType,
@@ -77,7 +159,7 @@ extension RxNetworkServiceProtocol {
             )
             urlRequest.httpBody = body
             return urlRequest
-        }
+        }.do(onNext: logRequest)
     }
     
     public func fetchURLRequest(
@@ -101,30 +183,30 @@ extension RxNetworkServiceProtocol {
                 )
             }
             return urlRequest
-        }
+        }.do(onNext: logRequest)
     }
     
     public func fetchResponse(from urlRequest: URLRequest) -> Observable<(response: HTTPURLResponse, data: Data)> {
-        URLSession.shared.rx.response(request: urlRequest)
+        URLSession.shared.rx.response(request: urlRequest).do(onNext: logResponse, onError: logError)
     }
     
-    public func fetchDecodableOutput<Element: Decodable>(from data: Data) -> Observable<Element> {
+    public func fetchDecodableOutput<Output: Decodable>(response: HTTPURLResponse, data: Data) -> Observable<Output> {
         Observable.create {
-            do { $0.onNext(try JSONDecoder().decode(Element.self, from: data)) }
+            do { $0.onNext(try JSONDecoder().decode(Output.self, from: data)) }
             catch { $0.onError(error) }
             return Disposables.create()
-        }
+        }.do(onError: logError)
     }
     
-    public func fetchStringResponse(from data: Data) -> Observable<String> {
+    public func fetchStringResponse(response: HTTPURLResponse, data: Data) -> Observable<String> {
         Observable.create {
             if let result = String(
                 data: data,
                 encoding: .utf8
             ) { $0.onNext(result) }
-            else { $0.onError(RxError.noElements) }
+            else { $0.onError(.invalidData(data)) }
             return Disposables.create()
-        }
+        }.do(onError: logError)
     }
     
     public func fetchXMLOutput<Output: XMLOutput>(from stringResponse: String) -> Observable<Output> {
@@ -132,49 +214,17 @@ extension RxNetworkServiceProtocol {
             do { $0.onNext( try RxNetworkService.XML.Mapper.parse(Output.self, from: stringResponse).value()) }
             catch { $0.onError(error) }
             return Disposables.create()
-        }
+        }.do(onError: logError)
     }
     
-    public func fetchStatus(from response: (HTTPURLResponse, Data)) -> Observable<RxNetworkService.Response> {
+    public func fetchStatus(response: HTTPURLResponse, data: Data) -> Observable<RxNetworkService.Response> {
         Observable.create {
-            switch response.0.statusCode {
-            case 200...299: $0.onNext(.init(statusCode: response.0.statusCode, allHeaderFields: response.0.allHeaderFields, data: response.1))
+            switch response.statusCode {
+            case 200...299: $0.onNext(.init(statusCode: response.statusCode, allHeaderFields: response.allHeaderFields, data: data))
             case let value: $0.onError(RxNetworkServiceError.requestError(.init(rawValue: value) ?? .unknown))
             }
             return Disposables.create()
-        }
-    }
-}
-
-open class RxNetworkService: RxNetworkServiceProtocol {
-    public struct Response {
-        let statusCode: Int
-        let allHeaderFields: [AnyHashable: Any]
-        let data: Data
-
-        var dataString: String {
-            String(data: data, encoding: .utf8) ?? ""
-        }
-    }
-    
-    public enum HTTPMethod: String {
-        case get = "GET"
-        case post = "POST"
-        case put = "PUT"
-        case delete = "DELETE"
-    }
-    
-    public enum ContentType: String {
-        case json
-        case xml
-    }
-    
-    public enum Charset: String {
-        case utf8 = "utf-8"
-    }
-    
-    public init() {
-        
+        }.do(onError: logError)
     }
 }
 
