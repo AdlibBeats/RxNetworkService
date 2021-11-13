@@ -279,7 +279,7 @@ extension RxNetworkService {
             }
             
             public static func parse<Output: XMLOutput>(_ type: Output.Type, from stringResponse: String) throws -> XMLModel {
-                try SWXMLHash.parse(stringResponse)
+                try XMLHash.parse(stringResponse)
                     .byKey("SOAP-ENV:\(String(describing: Envelope.self))")
                     .byKey("SOAP-ENV:\(String(describing: Body.self))")
                     .byKey("ns1:\(String(describing: type))")
