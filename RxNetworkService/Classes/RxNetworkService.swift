@@ -43,7 +43,7 @@ private extension ObserverType {
     }
 }
 
-public protocol RxNetworkServiceProtocol: class {
+public protocol RxNetworkServiceProtocol: AnyObject {
     func fetchUrl(from string: String) -> Observable<URL>
     func fetchURLRequest(
         from url: String,
