@@ -221,7 +221,7 @@ extension RxNetworkService: RxNetworkServiceProtocol {
         Observable.create {
             switch response.statusCode {
             case 200...299: $0.onNext(.init(statusCode: response.statusCode, allHeaderFields: response.allHeaderFields, data: data))
-            case let value: $0.onError(RxNetworkServiceError.requestError(.init(rawValue: value) ?? .unknown))
+            case let value: $0.onError(.requestError(.init(rawValue: value) ?? .unknown))
             }
             return Disposables.create()
         }.do(onError: logError)
