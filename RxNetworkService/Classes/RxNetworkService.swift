@@ -231,13 +231,7 @@ extension RxNetworkService: RxNetworkServiceProtocol {
 // MARK: XMLMapper
 
 public typealias XMLModel = XMLIndexer
-public protocol XMLOutput: XMLIndexerDeserializable {
-    static func deserialize(_ model: XMLModel) throws -> Self
-}
-
-public extension XMLOutput {
-    static func deserialize(_ model: XMLModel) throws -> Self { try deserialize(model) }
-}
+public typealias XMLOutput = XMLIndexerDeserializable
 
 infix operator <- : DefaultPrecedence
 
