@@ -99,6 +99,7 @@ open class RxNetworkService {
         case error
     }
 
+    public var urlSession = URLSession.shared
     public var logging: [Logging] = [.request, .response, .error]
 
     public init() {
@@ -187,7 +188,7 @@ extension RxNetworkService: RxNetworkServiceProtocol {
     }
     
     public func fetchResponse(from urlRequest: URLRequest) -> Observable<(response: HTTPURLResponse, data: Data)> {
-        URLSession.shared.rx.response(request: urlRequest).do(onNext: logResponse, onError: logError)
+        urlSession.rx.response(request: urlRequest).do(onNext: logResponse, onError: logError)
     }
     
     public func fetchDecodableOutput<Output: Decodable>(response: HTTPURLResponse, data: Data) -> Observable<Output> {
