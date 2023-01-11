@@ -5,9 +5,9 @@ use_frameworks!
 target 'RxNetworkService_Example' do
   pod 'RxNetworkService', :path => '../'
   
-  pod 'RxSwift'
-  pod 'RxCocoa'
-  pod 'SWXMLHash', '~> 6.0.0'
+  pod 'RxSwift', '6.1.0'
+  pod 'RxCocoa', '6.1.0'
+  pod 'SWXMLHash', '6.0.0'
   
   target 'RxNetworkService_Tests' do
     inherit! :search_paths

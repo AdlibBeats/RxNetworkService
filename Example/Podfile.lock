@@ -2,7 +2,7 @@ PODS:
   - RxCocoa (6.1.0):
     - RxRelay (= 6.1.0)
     - RxSwift (= 6.1.0)
-  - RxNetworkService (1.1.8):
+  - RxNetworkService (1.2.0):
     - RxCocoa
     - RxSwift
     - SWXMLHash
@@ -12,10 +12,10 @@ PODS:
   - SWXMLHash (6.0.0)
 
 DEPENDENCIES:
-  - RxCocoa
+  - RxCocoa (= 6.1.0)
   - RxNetworkService (from `../`)
-  - RxSwift
-  - SWXMLHash (~> 6.0.0)
+  - RxSwift (= 6.1.0)
+  - SWXMLHash (= 6.0.0)
 
 SPEC REPOS:
   trunk:
@@ -30,11 +30,11 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   RxCocoa: 5c51f02d562cbd94629f6c26cf0c80fe4ab8d343
-  RxNetworkService: 32f908ffb62d45d19fd40d9efb1a534c683f25b2
+  RxNetworkService: 57ada1d07c977f0d7ba89c6f73828baa09c7cdeb
   RxRelay: 483e1a19fad961b41f0b0c0bee506f46c1ae14fe
   RxSwift: a834e5c538e89eca0cae86f403f4fbf0336786ce
   SWXMLHash: 9d851ed3edf48ec2bd0db98f0cda0ad4136d75e3
 
-PODFILE CHECKSUM: b72f362b446d228af4cce11a7f558572260ce754
+PODFILE CHECKSUM: 117d1882313b67c9e7596d448d5e46b59b2a5175
 
 COCOAPODS: 1.11.3
