@@ -13,26 +13,15 @@ import SWXMLHash
 // MARK: RxNetworkService
 
 public enum RxNetworkServiceError: Error {
-    public enum Status: Int {
-        case badRequest = 400
-        case unauthorized = 401
-        case notFound = 404
-        case requestTimeout = 408
-        case internalServerError = 500
-        case notImplemented = 501
-        case badGateway = 502
-        case serviceUnavailable = 503
-        case unknown
-    }
     case invalidUrl(String)
     case invalidData(Data)
-    case requestError(Status)
+    case requestError(Int)
 
     var description: String {
         switch self {
         case .invalidUrl(let string): return "Invalid url string: \(string)"
         case .invalidData(let data): return "Invalid data: \(data)"
-        case .requestError(let status): return "Error status code: \(status.rawValue > 0 ? "\(status.rawValue)" : "unknown")"
+        case .requestError(let statusCode): return "Error status code: \(statusCode)"
         }
     }
 }
@@ -61,6 +50,7 @@ public protocol RxNetworkServiceProtocol: AnyObject {
     ) -> Observable<URLRequest>
     func fetchResponse(from urlRequest: URLRequest) -> Observable<(response: HTTPURLResponse, data: Data)>
     func fetchDecodableOutput<Output: Decodable>(response: HTTPURLResponse, data: Data) -> Observable<Output>
+    func fetchDecodableOutput<Output: Decodable>(response: HTTPURLResponse, data: Data, keyDecodingStrategy: JSONDecoder.KeyDecodingStrategy) -> Observable<Output>
     func fetchStringResponse(response: HTTPURLResponse, data: Data) -> Observable<String>
     func fetchXMLOutput<Output: XMLOutput>(from stringResponse: String) -> Observable<Output>
     func fetchStatus(response: HTTPURLResponse, data: Data) -> Observable<RxNetworkService.Response>
@@ -188,12 +178,26 @@ extension RxNetworkService: RxNetworkServiceProtocol {
     }
     
     public func fetchResponse(from urlRequest: URLRequest) -> Observable<(response: HTTPURLResponse, data: Data)> {
-        urlSession.rx.response(request: urlRequest).do(onNext: logResponse, onError: logError)
+        urlSession.rx.response(request: urlRequest).do(
+            onNext: logResponse,
+            onError: { [weak self] error in
+                guard error.localizedDescription != "cancelled" else { return }
+                self?.logError(error: error)
+            }
+        )
+    }
+
+    public func fetchDecodableOutput<Output: Decodable>(response: HTTPURLResponse, data: Data) -> Observable<Output> {
+        fetchDecodableOutput(response: response, data: data, keyDecodingStrategy: .useDefaultKeys)
     }
     
-    public func fetchDecodableOutput<Output: Decodable>(response: HTTPURLResponse, data: Data) -> Observable<Output> {
+    public func fetchDecodableOutput<Output: Decodable>(response: HTTPURLResponse, data: Data, keyDecodingStrategy: JSONDecoder.KeyDecodingStrategy) -> Observable<Output> {
         Observable.create {
-            do { $0.onNext(try JSONDecoder().decode(Output.self, from: data)) }
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = keyDecodingStrategy
+                $0.onNext(try decoder.decode(Output.self, from: data))
+            }
             catch { $0.onError(error) }
             return Disposables.create()
         }.do(onError: logError)
@@ -222,7 +226,7 @@ extension RxNetworkService: RxNetworkServiceProtocol {
         Observable.create {
             switch response.statusCode {
             case 200...299: $0.onNext(.init(statusCode: response.statusCode, allHeaderFields: response.allHeaderFields, data: data))
-            case let value: $0.onError(.requestError(.init(rawValue: value) ?? .unknown))
+            case let value: $0.onError(.requestError(value))
             }
             return Disposables.create()
         }.do(onError: logError)

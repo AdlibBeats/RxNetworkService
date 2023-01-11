@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name = 'RxNetworkService'
-  s.version = '1.1.7'
+  s.version = '1.1.8'
   s.swift_version = '5.0'
   s.summary = 'A short description of RxNetworkService.'
   s.requires_arc = true
