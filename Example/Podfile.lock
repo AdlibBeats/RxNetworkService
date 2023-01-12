@@ -2,10 +2,10 @@ PODS:
   - RxCocoa (6.1.0):
     - RxRelay (= 6.1.0)
     - RxSwift (= 6.1.0)
-  - RxNetworkService (1.2.0):
+  - RxNetworkService (1.2.1):
     - RxCocoa
     - RxSwift
-    - SWXMLHash
+    - SWXMLHash (= 6.0.0)
   - RxRelay (6.1.0):
     - RxSwift (= 6.1.0)
   - RxSwift (6.1.0)
@@ -30,7 +30,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   RxCocoa: 5c51f02d562cbd94629f6c26cf0c80fe4ab8d343
-  RxNetworkService: 57ada1d07c977f0d7ba89c6f73828baa09c7cdeb
+  RxNetworkService: eba9fafc13750d5adae0af151d5e53d07d4aac14
   RxRelay: 483e1a19fad961b41f0b0c0bee506f46c1ae14fe
   RxSwift: a834e5c538e89eca0cae86f403f4fbf0336786ce
   SWXMLHash: 9d851ed3edf48ec2bd0db98f0cda0ad4136d75e3

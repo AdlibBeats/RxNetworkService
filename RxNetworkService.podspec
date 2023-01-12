@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name = 'RxNetworkService'
-  s.version = '1.2.0'
+  s.version = '1.2.1'
   s.swift_version = '5.0'
   s.summary = 'A short description of RxNetworkService.'
   s.requires_arc = true
@@ -18,7 +18,7 @@ Pod::Spec.new do |s|
   s.source = { :git => 'https://github.com/AdlibBeats/RxNetworkService.git', :tag => "#{s.version}" }
   s.ios.deployment_target = '13.0'
   s.source_files = 'RxNetworkService/Classes/**/*.{swift}'
-  s.dependency 'RxSwift', '6.1.0'
-  s.dependency 'RxCocoa', '6.1.0'
+  s.dependency 'RxSwift'
+  s.dependency 'RxCocoa'
   s.dependency 'SWXMLHash', '6.0.0'
 end
