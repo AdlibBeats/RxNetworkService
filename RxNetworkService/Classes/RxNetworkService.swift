@@ -178,13 +178,9 @@ extension RxNetworkService: RxNetworkServiceProtocol {
     }
     
     public func fetchResponse(from urlRequest: URLRequest) -> Observable<(response: HTTPURLResponse, data: Data)> {
-        urlSession.rx.response(request: urlRequest).do(
-            onNext: logResponse,
-            onError: { [weak self] error in
-                guard error.localizedDescription != "cancelled" else { return }
-                self?.logError(error: error)
-            }
-        )
+        urlSession.rx.response(request: urlRequest).catch({ error in
+            error.localizedDescription == "cancelled" ? .never() : .error(error)
+        }).do(onNext: logResponse, onError: logError)
     }
 
     public func fetchDecodableOutput<Output: Decodable>(response: HTTPURLResponse, data: Data) -> Observable<Output> {
