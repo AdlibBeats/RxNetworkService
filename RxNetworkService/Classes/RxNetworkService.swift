@@ -178,7 +178,7 @@ extension RxNetworkService: RxNetworkServiceProtocol {
     }
     
     public func fetchResponse(from urlRequest: URLRequest) -> Observable<(response: HTTPURLResponse, data: Data)> {
-        urlSession.rx.response(request: urlRequest).catch({ error in
+        urlSession.rx.response(request: urlRequest).catchError({ error in
             error.localizedDescription == "cancelled" ? .never() : .empty()
         }).do(onNext: logResponse, onError: logError)
     }
