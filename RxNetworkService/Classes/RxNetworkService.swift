@@ -91,6 +91,7 @@ open class RxNetworkService {
 
     public var urlSession = URLSession.shared
     public var logging: [Logging] = [.request, .response, .error]
+    public var ignoredErrors: [Int] = [NSURLErrorCancelled]
 
     public init() {
 
@@ -152,7 +153,7 @@ extension RxNetworkService: RxNetworkServiceProtocol {
             return urlRequest
         }.do(onNext: logRequest)
     }
-    
+
     public func fetchURLRequest(
         from url: String,
         contentType: RxNetworkService.ContentType,
@@ -176,17 +177,21 @@ extension RxNetworkService: RxNetworkServiceProtocol {
             return urlRequest
         }.do(onNext: logRequest)
     }
-    
+
     public func fetchResponse(from urlRequest: URLRequest) -> Observable<(response: HTTPURLResponse, data: Data)> {
-        urlSession.rx.response(request: urlRequest).catchError({ error in
-            error.localizedDescription == "cancelled" ? .never() : .empty()
+        urlSession.rx.response(request: urlRequest).catchError({ [weak self] error in
+            if (self?.ignoredErrors.contains((error as NSError).code) ?? false) {
+                return .never()
+            } else {
+                throw error
+            }
         }).do(onNext: logResponse, onError: logError)
     }
 
     public func fetchDecodableOutput<Output: Decodable>(response: HTTPURLResponse, data: Data) -> Observable<Output> {
         fetchDecodableOutput(response: response, data: data, keyDecodingStrategy: .useDefaultKeys)
     }
-    
+
     public func fetchDecodableOutput<Output: Decodable>(response: HTTPURLResponse, data: Data, keyDecodingStrategy: JSONDecoder.KeyDecodingStrategy) -> Observable<Output> {
         Observable.create {
             do {
@@ -198,7 +203,7 @@ extension RxNetworkService: RxNetworkServiceProtocol {
             return Disposables.create()
         }.do(onError: logError)
     }
-    
+
     public func fetchStringResponse(response: HTTPURLResponse, data: Data) -> Observable<String> {
         Observable.create {
             if let result = String(
@@ -209,7 +214,7 @@ extension RxNetworkService: RxNetworkServiceProtocol {
             return Disposables.create()
         }.do(onError: logError)
     }
-    
+
     public func fetchXMLOutput<Output: XMLOutput>(from stringResponse: String) -> Observable<Output> {
         Observable.create {
             do { $0.onNext( try RxNetworkService.XML.Mapper.parse(Output.self, from: stringResponse).value()) }
@@ -217,7 +222,7 @@ extension RxNetworkService: RxNetworkServiceProtocol {
             return Disposables.create()
         }.do(onError: logError)
     }
-    
+
     public func fetchStatus(response: HTTPURLResponse, data: Data) -> Observable<RxNetworkService.Response> {
         Observable.create {
             switch response.statusCode {
@@ -272,14 +277,14 @@ extension RxNetworkService {
                 case child
                 case unknown
             }
-            
+
             public static func parse<Output: XMLOutput>(_ type: Output.Type, from stringResponse: String) throws -> XMLModel {
                 try XMLHash.parse(stringResponse)
                     .byKey("SOAP-ENV:\(String(describing: Envelope.self))")
                     .byKey("SOAP-ENV:\(String(describing: Body.self))")
                     .byKey("ns1:\(String(describing: type))")
             }
-            
+
             public struct Body: XMLValueMapperProtocol {
                 public var xml: String { xml(mode: .child) }
                 public func xml(mode: KindMode) -> String {
@@ -287,13 +292,13 @@ extension RxNetworkService {
                 }
                 public let value: String
             }
-            
+
             public struct Envelope: XMLValueMapperProtocol {
                 private let env: String
                 private let enc: String
                 private let xsi: String
                 private let xsd: String
-                
+
                 public init(
                     value: String,
                     env: String = "http://schemas.xmlsoap.org/soap/envelope/",
@@ -307,56 +312,56 @@ extension RxNetworkService {
                     self.xsi = xsi
                     self.xsd = xsd
                 }
-                
+
                 public var xml: String { xml(mode: .child) }
                 public func xml(mode: KindMode) -> String {
                     "<SOAP-ENV:\(String(describing: Envelope.self)) xmlns:SOAP-ENV=\"\(env)\" xmlns:SOAP-ENC=\"\(enc)\" xmlns:xsi=\"\(xsi)\" xmlns:xsd=\"\(xsd)\">\(value)</SOAP-ENV:\(String(describing: Envelope.self))>"
                 }
                 public let value: String
             }
-            
+
             public struct Header: XMLMapperProtocol {
                 public enum Encoding: String {
                     case utf8 = "UTF-8"
                 }
                 private let version: Double
                 private let encoding: Encoding
-                
+
                 public init(version: Double = 1.0, encoding: Encoding = .utf8) {
                     self.version = version
                     self.encoding = encoding
                 }
-                
+
                 public var xml: String { xml(mode: .child) }
                 public func xml(mode: KindMode) -> String {
                     "<?xml version=\"\(String(format: "%.1f", version))\" encoding=\"\(encoding.rawValue)\"?>"
                 }
             }
-            
+
             public struct Property: XMLValueMapperProtocol {
                 public struct Value {
                     let value: String
                     let parentUrl: String
-                    
+
                     public init(value: String, parentUrl: String) {
                         self.value = value
                         self.parentUrl = parentUrl
                     }
-                    
+
                     public init(value: String) {
                         self.init(value: value, parentUrl: "")
                     }
                 }
-                
+
                 private let name: String
                 private let parentUrl: String
-                
+
                 public init(name: String, value: Value) {
                     self.name = name
                     self.value = value.value
                     self.parentUrl = value.parentUrl
                 }
-                
+
                 public var xml: String { xml(mode: .child) }
                 public func xml(mode: KindMode) -> String {
                     switch mode {
@@ -367,7 +372,7 @@ extension RxNetworkService {
                 }
                 public let value: String
             }
-            
+
             public let value: String
             public var xml: String { xml(mode: .child) }
             public func xml(mode: KindMode) -> String {
