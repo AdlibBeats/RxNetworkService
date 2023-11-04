@@ -12,7 +12,7 @@ import RxNetworkService
 
 extension String {
     static func <- (name: Self, value: String) -> RxNetworkService.XML.Mapper.Property {
-        .init(name: name, value: .init(value: value, parentUrl: "http://www.soap-url..."))
+        .init(name: name, value: .init(value: value, parentUrl: "soapUrl"))
     }
 }
 
@@ -26,9 +26,9 @@ final class RxMyNetworkService: RxNetworkService {
     fileprivate var secretKey = ""
     
     enum Config: String {
-        case baseUrl = "https://base-url"
-        case jsonUrl = "/url"
-        case xmlUrl = "/url.php?wsdl"
+        case baseUrl = "...base-url"
+        case jsonUrl = "...url"
+        case xmlUrl = "...wsdl"
     }
 }
 
@@ -39,7 +39,6 @@ extension RxMyNetworkService: RxMyNetworkServiceProtocol {
         fetchURLRequest(
             from: [Config.baseUrl.rawValue, Config.jsonUrl.rawValue].joined(),
             contentType: .json,
-            charset: .utf8,
             httpMethod: .get,
             body: try? JSONEncoder().encode(MyJSONInput(test: "hello")) // nil // String or Data? (Codable)
         )
@@ -52,7 +51,6 @@ extension RxMyNetworkService: RxMyNetworkServiceProtocol {
         fetchURLRequest(
             from: [Config.baseUrl.rawValue, Config.xmlUrl.rawValue].joined(),
             contentType: .xml,
-            charset: .utf8,
             httpMethod: .post,
             body: MyXMLInput(
                 token: sessionToken,

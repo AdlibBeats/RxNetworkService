@@ -36,16 +36,26 @@ public protocol RxNetworkServiceProtocol: AnyObject {
     func fetchUrl(from string: String) -> Observable<URL>
     func fetchURLRequest(
         from url: String,
-        contentType: RxNetworkService.ContentType,
-        charset: RxNetworkService.Charset,
+        contentType: RxNetworkService.ContentType?,
         httpMethod: RxNetworkService.HTTPMethod,
         body: Data?
     ) -> Observable<URLRequest>
     func fetchURLRequest(
         from url: String,
-        contentType: RxNetworkService.ContentType,
-        charset: RxNetworkService.Charset,
+        contentType: RxNetworkService.ContentType?,
         httpMethod: RxNetworkService.HTTPMethod,
+        body: String
+    ) -> Observable<URLRequest>
+    func fetchURLRequest(
+        from url: String,
+        contentType: String,
+        httpMethod: String,
+        body: Data?
+    ) -> Observable<URLRequest>
+    func fetchURLRequest(
+        from url: String,
+        contentType: String,
+        httpMethod: String,
         body: String
     ) -> Observable<URLRequest>
     func fetchResponse(from urlRequest: URLRequest) -> Observable<(response: HTTPURLResponse, data: Data)>
@@ -75,12 +85,8 @@ open class RxNetworkService {
     }
 
     public enum ContentType: String {
-        case json
-        case xml
-    }
-
-    public enum Charset: String {
-        case utf8 = "utf-8"
+        case json = "application/json"
+        case xml = "text/xml; charset=utf-8"
     }
 
     public enum Logging {
@@ -137,18 +143,16 @@ extension RxNetworkService: RxNetworkServiceProtocol {
 
     public func fetchURLRequest(
         from url: String,
-        contentType: RxNetworkService.ContentType,
-        charset: RxNetworkService.Charset,
+        contentType: RxNetworkService.ContentType?,
         httpMethod: RxNetworkService.HTTPMethod,
         body: Data?
     ) -> Observable<URLRequest> {
         fetchUrl(from: url).map {
             var urlRequest = URLRequest(url: $0)
             urlRequest.httpMethod = httpMethod.rawValue
-            urlRequest.addValue(
-                "text/\(contentType.rawValue); charset=\(charset.rawValue)",
-                forHTTPHeaderField: "Content-Type"
-            )
+            if let contentType = contentType {
+                urlRequest.addValue(contentType.rawValue, forHTTPHeaderField: "Content-Type")
+            }
             urlRequest.httpBody = body
             return urlRequest
         }.do(onNext: logRequest)
@@ -156,18 +160,55 @@ extension RxNetworkService: RxNetworkServiceProtocol {
 
     public func fetchURLRequest(
         from url: String,
-        contentType: RxNetworkService.ContentType,
-        charset: RxNetworkService.Charset,
+        contentType: RxNetworkService.ContentType?,
         httpMethod: RxNetworkService.HTTPMethod,
         body: String
     ) -> Observable<URLRequest> {
         fetchUrl(from: url).map {
             var urlRequest = URLRequest(url: $0)
             urlRequest.httpMethod = httpMethod.rawValue
-            urlRequest.addValue(
-                "text/\(contentType.rawValue); charset=\(charset.rawValue)",
-                forHTTPHeaderField: "Content-Type"
-            )
+            if let contentType = contentType {
+                urlRequest.addValue(contentType.rawValue, forHTTPHeaderField: "Content-Type")
+            }
+            if !body.isEmpty {
+                urlRequest.httpBody = body.data(
+                    using: .utf8,
+                    allowLossyConversion: false
+                )
+            }
+            return urlRequest
+        }.do(onNext: logRequest)
+    }
+
+    public func fetchURLRequest(
+        from url: String,
+        contentType: String,
+        httpMethod: String,
+        body: Data?
+    ) -> Observable<URLRequest> {
+        fetchUrl(from: url).map {
+            var urlRequest = URLRequest(url: $0)
+            urlRequest.httpMethod = httpMethod
+            if !contentType.isEmpty {
+                urlRequest.addValue(contentType, forHTTPHeaderField: "Content-Type")
+            }
+            urlRequest.httpBody = body
+            return urlRequest
+        }.do(onNext: logRequest)
+    }
+
+    public func fetchURLRequest(
+        from url: String,
+        contentType: String,
+        httpMethod: String,
+        body: String
+    ) -> Observable<URLRequest> {
+        fetchUrl(from: url).map {
+            var urlRequest = URLRequest(url: $0)
+            urlRequest.httpMethod = httpMethod
+            if !contentType.isEmpty {
+                urlRequest.addValue(contentType, forHTTPHeaderField: "Content-Type")
+            }
             if !body.isEmpty {
                 urlRequest.httpBody = body.data(
                     using: .utf8,
@@ -179,7 +220,7 @@ extension RxNetworkService: RxNetworkServiceProtocol {
     }
 
     public func fetchResponse(from urlRequest: URLRequest) -> Observable<(response: HTTPURLResponse, data: Data)> {
-        urlSession.rx.response(request: urlRequest).catchError({ [weak self] error in
+        urlSession.rx.response(request: urlRequest).catch({ [weak self] error in
             if (self?.ignoredErrors.contains((error as NSError).code) ?? false) {
                 return .never()
             } else {
