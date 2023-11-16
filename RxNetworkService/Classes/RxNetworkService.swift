@@ -365,17 +365,17 @@ extension RxNetworkService {
                 public enum Encoding: String {
                     case utf8 = "UTF-8"
                 }
-                private let version: Double
+                private let version: String
                 private let encoding: Encoding
 
-                public init(version: Double = 1.0, encoding: Encoding = .utf8) {
+                public init(version: String = "1.0", encoding: Encoding = .utf8) {
                     self.version = version
                     self.encoding = encoding
                 }
 
                 public var xml: String { xml(mode: .child) }
                 public func xml(mode: KindMode) -> String {
-                    "<?xml version=\"\(String(format: "%.1f", version))\" encoding=\"\(encoding.rawValue)\"?>"
+                    "<?xml version=\"\(version)\" encoding=\"\(encoding.rawValue)\"?>"
                 }
             }
 
@@ -421,4 +421,85 @@ extension RxNetworkService {
             }
         }
     }
+}
+
+// MARK: JSONMapper
+
+private extension String {
+    var snakeCase: String {
+        camelCaseRegex(pattern: "([A-Z]+)([A-Z][a-z]|[0-9])")?
+            .camelCaseRegex(pattern: "([a-z])([A-Z]|[0-9])")?
+            .camelCaseRegex(pattern: "([0-9])([A-Z])")?
+            .lowercased() ?? lowercased()
+    }
+
+    func camelCaseRegex(pattern: String) -> String? {
+        let regex = try? NSRegularExpression(pattern: pattern, options: [])
+        let range = NSRange(location: 0, length: count)
+        return regex?.stringByReplacingMatches(in: self, options: [], range: range, withTemplate: "$1_$2")
+    }
+}
+
+protocol JSONInput {
+    var json: String { get }
+    var valuesString: String { get }
+    var convertToSnakeCase: Bool { get }
+    var convertToString: Bool { get }
+}
+
+extension JSONInput {
+    var json: String {
+        let properties = Mirror(reflecting: self).children.map {
+            guard let label = $0.label, !label.isEmpty else { return "" }
+
+            let name = "\"\(convertToSnakeCase ? label.snakeCase : label)\""
+
+            let value = {
+                switch $0 {
+                case let value as String:
+                    return "\"\(value)\""
+                case let value as Bool:
+                    return convertToString ? "\"\(value ? "Y" : "N")\"" : String(value)
+                case let value as Int:
+                    return convertToString ? "\"\(value)\"" : String(value)
+                case let value as Double:
+                    return convertToString ? "\"\(value)\"" : String(value)
+                case let value as JSONInput:
+                    return value.json
+                case let value as [JSONInput]:
+                    return "[\(value.map { $0.json }.joined(separator: ","))]"
+                default:
+                    return "null"
+                }
+            }($0.value)
+
+            return "\(name):\(value)"
+        }.filter { !$0.isEmpty }
+
+        return properties.isEmpty ? "null" : "{\(properties.joined(separator: ","))}"
+    }
+
+    var valuesString: String {
+        Mirror(reflecting: self).children.map {
+            switch $0.value {
+            case let value as String:
+                return value
+            case let value as Bool:
+                return convertToString ? (value ? "Y" : "N") : String(value)
+            case let value as Int:
+                return String(value)
+            case let value as Double:
+                return String(value)
+            case let value as JSONInput:
+                return value.valuesString
+            case let value as [JSONInput]:
+                return value.map { $0.valuesString }.joined()
+            default:
+                return ""
+            }
+        }.filter { !$0.isEmpty }.joined()
+    }
+
+    var convertToSnakeCase: Bool { true }
+    var convertToString: Bool { true }
 }
