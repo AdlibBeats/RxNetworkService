@@ -440,14 +440,14 @@ private extension String {
     }
 }
 
-protocol JSONInput {
+public protocol JSONInput {
     var json: String { get }
     var valuesString: String { get }
     var convertToSnakeCase: Bool { get }
     var convertToString: Bool { get }
 }
 
-extension JSONInput {
+public extension JSONInput {
     var json: String {
         let properties = Mirror(reflecting: self).children.map {
             guard let label = $0.label, !label.isEmpty else { return "" }
