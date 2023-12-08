@@ -458,8 +458,10 @@ public extension JSONInput {
                 switch $0 {
                 case let value as String:
                     return "\"\(value)\""
+                case let value as [String]:
+                    return "[\(value.joined(separator: ","))]"
                 case let value as Bool:
-                    return convertToString ? "\"\(value ? "Y" : "N")\"" : String(value)
+                    return convertToString ? "\"\(value)\"" : String(value)
                 case let value as Int:
                     return convertToString ? "\"\(value)\"" : String(value)
                 case let value as Double:
@@ -484,8 +486,10 @@ public extension JSONInput {
             switch $0.value {
             case let value as String:
                 return value
+            case let value as [String]:
+                return value.joined(separator: ",")
             case let value as Bool:
-                return convertToString ? (value ? "Y" : "N") : String(value)
+                return String(value)
             case let value as Int:
                 return String(value)
             case let value as Double:
