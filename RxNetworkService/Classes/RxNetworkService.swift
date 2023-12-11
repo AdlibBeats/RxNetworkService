@@ -110,25 +110,31 @@ open class RxNetworkService {
             let httpBody = request.httpBody
         else { return }
 
-        #if DEBUG
-        print("*** 🟡 Request ***\nHTTPMethod: \(httpMethod)\nHTTPBody: \(String(data: httpBody, encoding: .utf8) ?? httpBody.description)")
-        #endif
+        DispatchQueue.main.async {
+            #if DEBUG
+            print("*** 🟡 Request ***\nHTTPMethod: \(httpMethod)\nHTTPBody: \(String(data: httpBody, encoding: .utf8) ?? httpBody.description)")
+            #endif
+        }
     }
 
     private func logResponse(response: HTTPURLResponse, data: Data) {
         guard logging.contains(.response) else { return }
 
-        #if DEBUG
-        print("*** 🟢 Response ***\nStatus code: \(response.statusCode)\nData: \(String(data: data, encoding: .utf8) ?? data.description)")
-        #endif
+        DispatchQueue.main.async {
+            #if DEBUG
+            print("*** 🟢 Response ***\nStatus code: \(response.statusCode)\nData: \(String(data: data, encoding: .utf8) ?? data.description)")
+            #endif
+        }
     }
 
     private func logError(error: Error) {
         guard logging.contains(.error) else { return }
 
-        #if DEBUG
-        print("*** 🔴 Error ***\nValue: \({ ($0 as? RxNetworkServiceError) ?? $0 }(error))")
-        #endif
+        DispatchQueue.main.async {
+            #if DEBUG
+            print("*** 🔴 Error ***\nValue: \({ ($0 as? RxNetworkServiceError) ?? $0 }(error))")
+            #endif
+        }
     }
 }
 
