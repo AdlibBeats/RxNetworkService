@@ -110,31 +110,31 @@ open class RxNetworkService {
             let httpBody = request.httpBody
         else { return }
 
-        DispatchQueue.main.async {
-            #if DEBUG
+        #if DEBUG
+        DispatchQueue.global(qos: .background).async {
             print("*** 🟡 Request ***\nHTTPMethod: \(httpMethod)\nHTTPBody: \(String(data: httpBody, encoding: .utf8) ?? httpBody.description)")
-            #endif
         }
+        #endif
     }
 
     private func logResponse(response: HTTPURLResponse, data: Data) {
         guard logging.contains(.response) else { return }
 
-        DispatchQueue.main.async {
-            #if DEBUG
+        #if DEBUG
+        DispatchQueue.global(qos: .background).async {
             print("*** 🟢 Response ***\nStatus code: \(response.statusCode)\nData: \(String(data: data, encoding: .utf8) ?? data.description)")
-            #endif
         }
+        #endif
     }
 
     private func logError(error: Error) {
         guard logging.contains(.error) else { return }
 
-        DispatchQueue.main.async {
-            #if DEBUG
+        #if DEBUG
+        DispatchQueue.global(qos: .background).async {
             print("*** 🔴 Error ***\nValue: \({ ($0 as? RxNetworkServiceError) ?? $0 }(error))")
-            #endif
         }
+        #endif
     }
 }
 
@@ -232,7 +232,7 @@ extension RxNetworkService: RxNetworkServiceProtocol {
             } else {
                 throw error
             }
-        }).do(onNext: logResponse, onError: logError)
+        }).do(onError: logError)
     }
 
     public func fetchDecodableOutput<Output: Decodable>(response: HTTPURLResponse, data: Data) -> Observable<Output> {
@@ -240,7 +240,25 @@ extension RxNetworkService: RxNetworkServiceProtocol {
     }
 
     public func fetchDecodableOutput<Output: Decodable>(response: HTTPURLResponse, data: Data, keyDecodingStrategy: JSONDecoder.KeyDecodingStrategy) -> Observable<Output> {
-        Observable.create {
+        if logging.contains(.response) {
+            #if DEBUG
+            DispatchQueue.global(qos: .background).async {
+                do {
+                    if
+                        let string = String(data: data, encoding: .utf8),
+                        let data = string.data(using: String.Encoding.utf8),
+                        let json = try JSONSerialization.jsonObject(with: data, options: []) as? NSDictionary {
+
+                        print("*** 🟢 Response ***\nStatus code: \(response.statusCode)\nData: \(json)")
+                    }
+                } catch let error {
+                    print(error.localizedDescription)
+                }
+            }
+            #endif
+        }
+
+        return Observable.create {
             do {
                 let decoder = JSONDecoder()
                 decoder.keyDecodingStrategy = keyDecodingStrategy
@@ -252,7 +270,9 @@ extension RxNetworkService: RxNetworkServiceProtocol {
     }
 
     public func fetchStringResponse(response: HTTPURLResponse, data: Data) -> Observable<String> {
-        Observable.create {
+        logResponse(response: response, data: data)
+
+        return Observable.create {
             if let result = String(
                 data: data,
                 encoding: .utf8
