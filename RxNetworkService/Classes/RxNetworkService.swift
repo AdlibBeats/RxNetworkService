@@ -513,7 +513,7 @@ public extension JSONInput {
             case let value as String:
                 return value
             case let value as [String]:
-                return value.joined(separator: ",")
+                return value.joined()
             case let value as Bool:
                 return String(value)
             case let value as Int:
