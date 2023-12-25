@@ -468,9 +468,8 @@ private extension String {
 
 public protocol JSONInput {
     var json: String { get }
-    var valuesString: String { get }
-    var convertToSnakeCase: Bool { get }
-    var convertToString: Bool { get }
+    var joined: String { get }
+    var snakeCase: Bool { get }
 }
 
 public extension JSONInput {
@@ -478,7 +477,7 @@ public extension JSONInput {
         let properties = Mirror(reflecting: self).children.map {
             guard let label = $0.label, !label.isEmpty else { return "" }
 
-            let name = "\"\(convertToSnakeCase ? label.snakeCase : label)\""
+            let name = "\"\(snakeCase ? label.snakeCase : label)\""
 
             let value = {
                 switch $0 {
@@ -487,11 +486,11 @@ public extension JSONInput {
                 case let value as [String]:
                     return "[\(value.joined(separator: ","))]"
                 case let value as Bool:
-                    return convertToString ? "\"\(value)\"" : String(value)
+                    return "\"\(value)\""
                 case let value as Int:
-                    return convertToString ? "\"\(value)\"" : String(value)
+                    return "\"\(value)\""
                 case let value as Double:
-                    return convertToString ? "\"\(value)\"" : String(value)
+                    return "\"\(value)\""
                 case let value as JSONInput:
                     return value.json
                 case let value as [JSONInput]:
@@ -521,15 +520,14 @@ public extension JSONInput {
             case let value as Double:
                 return String(value)
             case let value as JSONInput:
-                return value.valuesString
+                return value.joined
             case let value as [JSONInput]:
-                return value.map { $0.valuesString }.joined()
+                return value.map { $0.joined }.joined()
             default:
                 return ""
             }
         }.filter { !$0.isEmpty }.joined()
     }
 
-    var convertToSnakeCase: Bool { true }
-    var convertToString: Bool { true }
+    var snakeCase: Bool { true }
 }
