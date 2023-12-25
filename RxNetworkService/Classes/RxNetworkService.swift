@@ -506,7 +506,7 @@ public extension JSONInput {
         return properties.isEmpty ? "null" : "{\(properties.joined(separator: ","))}"
     }
 
-    var valuesString: String {
+    var joined: String {
         Mirror(reflecting: self).children.map {
             switch $0.value {
             case let value as String:
