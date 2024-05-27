@@ -245,11 +245,11 @@ extension RxNetworkService: RxNetworkServiceProtocol {
             DispatchQueue.global(qos: .background).async {
                 do {
                     if
-                        let string = String(data: data, encoding: .utf8),
-                        let data = string.data(using: String.Encoding.utf8),
-                        let json = try JSONSerialization.jsonObject(with: data, options: []) as? NSDictionary {
+                        let json = try JSONSerialization.jsonObject(with: data, options: []) as? NSDictionary, 
+                        let newData = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted]),
+                        let prettyPrintedString = NSString(data: newData, encoding: String.Encoding.utf8.rawValue) {
 
-                        print("*** 🟢 Response ***\nStatus code: \(response.statusCode)\nData: \(json)")
+                        print("*** 🟢 Response ***\nStatus code: \(response.statusCode)\nData: \(prettyPrintedString as String)")
                     }
                 } catch let error {
                     print(error.localizedDescription)
